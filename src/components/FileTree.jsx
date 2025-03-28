@@ -183,9 +183,19 @@ const FileTree = (props) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   });
   
+  // Get the selected node's name for display
+  const getSelectedNodeName = () => {
+    const selectedNode = flatNodes().find(node => node.path === selectedNodePath());
+    return selectedNode ? selectedNode.path : 'No selection';
+  };
+
   return (
     <div class={styles.fileTree} tabIndex="0">
       <h3 class={styles.title}>File Explorer</h3>
+      <div class={styles.selectedItemDisplay}>
+        <span class={styles.selectedItemLabel}>Selected: </span>
+        {getSelectedNodeName()}
+      </div>
       <div class={styles.treeContainer}>
         <FileTreeNode 
           node={data()} 
