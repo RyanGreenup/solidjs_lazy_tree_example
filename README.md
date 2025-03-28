@@ -1,5 +1,7 @@
 ## Usage
 
+# Adapted from https://github.com/themesberg/tailwind-solidjs-starter
+
 Those templates dependencies are maintained via [pnpm](https://pnpm.io) via `pnpm up -Lri`.
 
 This is the reason you see a `pnpm-lock.yaml`. That being said, any package manager will work. This file can be safely be removed once you clone a template.
@@ -32,3 +34,12 @@ Your app is ready to be deployed!
 ## Deployment
 
 You can deploy the `dist` folder to any static host provider (netlify, surge, now, etc.)
+
+this commit is all that was required to not have things stuck in the DOM. Aider got it in one go.
+
+f379d0ded242be0f26bf3e299f4777d1684b98e8
+
+
+this commit got it in one go for keybindings
+
+0c069c1c67f747a881dea18cb4eca045b7049414
