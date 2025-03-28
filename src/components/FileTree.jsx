@@ -1,4 +1,4 @@
-import { createSignal, For } from 'solid-js';
+import { createSignal, For, Show } from 'solid-js';
 import styles from './FileTree.module.css';
 
 // Sample file tree data structure
@@ -61,10 +61,10 @@ const FileTreeNode = (props) => {
         <span class={styles.nodeName}>{props.node.name}</span>
       </div>
       
-      {isDirectory() && expanded() && props.node.children && (
+      <Show when={isDirectory() && expanded() && props.node.children}>
         <div class={styles.children}>
           <For each={props.node.children}>
-            {(childNode, index) => (
+            {(childNode) => (
               <FileTreeNode 
                 node={childNode} 
                 depth={props.depth + 1} 
@@ -72,7 +72,7 @@ const FileTreeNode = (props) => {
             )}
           </For>
         </div>
-      )}
+      </Show>
     </div>
   );
 };
