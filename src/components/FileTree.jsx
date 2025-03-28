@@ -160,6 +160,13 @@ const FileTree = (props) => {
       if (element) {
         element.scrollIntoView({ block: 'nearest' });
       }
+    } else if (e.key === ' ' || e.key === 'Spacebar') { // Handle space key
+      e.preventDefault();
+      
+      const selectedNode = flatNodes().find(node => node.path === selectedNodePath());
+      if (selectedNode && selectedNode.type === 'directory') {
+        toggleExpand(selectedNodePath());
+      }
     }
   };
   
