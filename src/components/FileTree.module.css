@@ -82,7 +82,19 @@
 .expandIcon {
   font-size: 10px;
   width: 16px;
-  display: inline-block;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-right: 4px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.expandIcon:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
 }
 
 .icon {

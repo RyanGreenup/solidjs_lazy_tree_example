@@ -60,7 +60,6 @@ const FileTreeNode = (props) => {
   };
   
   const toggleExpand = (e) => {
-    e.stopPropagation();
     if (isDirectory()) {
       props.onToggleExpand(nodePath());
     }
@@ -84,6 +83,19 @@ const FileTreeNode = (props) => {
     return dragDropState.active?.draggable === nodePath();
   };
 
+  // Track if we're in a drag operation
+  const isDragActive = () => {
+    return !!dragDropState.active?.draggable;
+  };
+
+  // Handle mouse down to prevent drag conflicts
+  const handleMouseDown = (e) => {
+    // If clicking on the expand icon, don't start a drag
+    if (e.target.classList.contains(styles.expandIcon)) {
+      e.stopPropagation();
+    }
+  };
+
   return (
     <div 
       class={styles.node} 
@@ -96,23 +108,28 @@ const FileTreeNode = (props) => {
       <div 
         class={`${styles.nodeHeader} ${isSelected() ? styles.selected : ''}`} 
         onClick={(e) => {
-          // Handle click for selection
-          props.onSelect?.(nodePath());
+          // Only handle selection if we're not in a drag operation
+          if (!isDragActive()) {
+            props.onSelect?.(nodePath());
+          }
         }}
         data-path={nodePath()}
         use:draggable
         use:droppable
+        onMouseDown={handleMouseDown}
       >
         {isDirectory() && (
-          <span 
-            class={styles.expandIcon} 
+          <div 
+            class={styles.expandIcon}
             onClick={(e) => {
               e.stopPropagation();
-              toggleExpand(e);
+              toggleExpand();
+              // Prevent drag from starting when clicking the expand icon
+              e.preventDefault();
             }}
           >
             {isExpanded() ? '▼' : '►'}
-          </span>
+          </div>
         )}
         <span class={`${styles.icon} ${isDirectory() ? styles.folderIcon : styles.fileIcon}`}>
           {isDirectory() ? '📁' : '📄'}
@@ -300,6 +317,9 @@ const FileTree = (props) => {
     // Don't drop a parent into its child
     if (targetPath.startsWith(sourcePath + '/')) return;
     
+    // Don't process if source path is the root
+    if (sourcePath === fileTree().name) return;
+    
     // Find the source node and its parent
     const sourceParentPath = sourcePath.substring(0, sourcePath.lastIndexOf('/'));
     const { node: sourceNode } = findNodeByPath(sourcePath);
@@ -383,8 +403,18 @@ const FileTree = (props) => {
         <span class={styles.selectedItemLabel}>Selected: </span>
         {getSelectedNodeName()}
       </div>
-      <DragDropProvider onDragStart={handleDragStart} onDragEnd={handleDragDrop}>
-        <DragDropSensors />
+      <DragDropProvider 
+        onDragStart={handleDragStart} 
+        onDragEnd={handleDragDrop}
+      >
+        <DragDropSensors 
+          pointerSensorOptions={{
+            activationConstraint: {
+              delay: 200, // Add a delay before drag starts
+              tolerance: 5, // Allow small movements without starting drag
+            }
+          }}
+        />
         <div class={styles.treeContainer}>
           <FileTreeNode 
             node={fileTree()} 
