@@ -136,27 +136,58 @@ const FileTree = (props) => {
     }
   });
   
+  // Get visible nodes (nodes that are in expanded directories)
+  const getVisibleNodes = () => {
+    const visible = [];
+    const expanded = expandedNodes();
+    
+    const isNodeVisible = (node, parentPath = '') => {
+      // Root is always visible
+      if (!parentPath) return true;
+      
+      // Check if all parent directories are expanded
+      const pathParts = parentPath.split('/');
+      let currentPath = '';
+      
+      for (let i = 0; i < pathParts.length; i++) {
+        if (i > 0) currentPath += '/';
+        currentPath += pathParts[i];
+        if (!expanded[currentPath]) return false;
+      }
+      
+      return true;
+    };
+    
+    flatNodes().forEach(node => {
+      if (isNodeVisible(node, node.path.substring(0, node.path.lastIndexOf('/')))) {
+        visible.push(node);
+      }
+    });
+    
+    return visible;
+  };
+  
   // Handle keyboard navigation
   const handleKeyDown = (e) => {
     if (e.key === 'j' || e.key === 'k') {
       e.preventDefault();
       
-      const nodes = flatNodes();
-      const currentIndex = nodes.findIndex(node => node.path === selectedNodePath());
+      const visibleNodes = getVisibleNodes();
+      const currentIndex = visibleNodes.findIndex(node => node.path === selectedNodePath());
       
       if (currentIndex === -1) return;
       
       let newIndex;
       if (e.key === 'j') { // Down
-        newIndex = Math.min(currentIndex + 1, nodes.length - 1);
+        newIndex = Math.min(currentIndex + 1, visibleNodes.length - 1);
       } else { // Up (k)
         newIndex = Math.max(currentIndex - 1, 0);
       }
       
-      setSelectedNodePath(nodes[newIndex].path);
+      setSelectedNodePath(visibleNodes[newIndex].path);
       
       // Ensure the selected node is visible
-      const element = document.querySelector(`[data-path="${nodes[newIndex].path}"]`);
+      const element = document.querySelector(`[data-path="${visibleNodes[newIndex].path}"]`);
       if (element) {
         element.scrollIntoView({ block: 'nearest' });
       }
