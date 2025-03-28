@@ -184,6 +184,7 @@ const FileTree = (props) => {
         newIndex = Math.max(currentIndex - 1, 0);
       }
       
+      // Just update selection without expanding directories
       setSelectedNodePath(visibleNodes[newIndex].path);
       
       // Ensure the selected node is visible
