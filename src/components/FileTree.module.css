@@ -12,6 +12,25 @@
   color: #333; /* Add explicit text color */
 }
 
+/* Drag and drop styles */
+.isDragging {
+  opacity: 0.5;
+}
+
+.isOver {
+  background-color: rgba(0, 120, 215, 0.1);
+}
+
+.dragOverlay {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  background-color: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
 .title {
   padding: 8px 12px;
   margin: 0;
