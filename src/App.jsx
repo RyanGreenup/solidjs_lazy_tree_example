@@ -1,7 +1,7 @@
 import logo from './logo.svg';
 import styles from './App.module.css';
 import { Modal } from 'flowbite';
-
+import FileTree from './components/FileTree';
 
 function App() {
   return (
@@ -19,6 +19,7 @@ function App() {
         >
           Learn Solid, Tailwind CSS and Flowbite
         </a>
+        <FileTree />
       </header>
     </div>
   );
