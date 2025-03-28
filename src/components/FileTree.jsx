@@ -121,14 +121,16 @@ const FileTree = (props) => {
   createEffect(() => {
     setFlatNodes(flattenTree(data()));
     
-    // Initialize all directories as expanded
-    const expanded = {};
-    flatNodes().forEach(node => {
-      if (node.type === 'directory') {
-        expanded[node.path] = true;
-      }
-    });
-    setExpandedNodes(expanded);
+    // Initialize all directories as expanded only on first render
+    if (Object.keys(expandedNodes()).length === 0) {
+      const expanded = {};
+      flatNodes().forEach(node => {
+        if (node.type === 'directory') {
+          expanded[node.path] = true;
+        }
+      });
+      setExpandedNodes(expanded);
+    }
     
     // Select the first node by default
     if (flatNodes().length > 0 && !selectedNodePath()) {
@@ -184,11 +186,12 @@ const FileTree = (props) => {
         newIndex = Math.max(currentIndex - 1, 0);
       }
       
-      // Just update selection without expanding directories
-      setSelectedNodePath(visibleNodes[newIndex].path);
+      // Update selection without modifying expanded state
+      const newPath = visibleNodes[newIndex].path;
+      setSelectedNodePath(newPath);
       
       // Ensure the selected node is visible
-      const element = document.querySelector(`[data-path="${visibleNodes[newIndex].path}"]`);
+      const element = document.querySelector(`[data-path="${newPath}"]`);
       if (element) {
         element.scrollIntoView({ block: 'nearest' });
       }
