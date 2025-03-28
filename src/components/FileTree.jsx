@@ -1,5 +1,13 @@
 import { createSignal, For, Show, onMount, createEffect } from 'solid-js';
 import styles from './FileTree.module.css';
+import {
+  DragDropProvider,
+  DragDropSensors,
+  DragOverlay,
+  createDraggable,
+  createDroppable,
+  useDragDropContext
+} from "@thisbeyond/solid-dnd";
 
 // Sample file tree data structure
 const dummyFileTree = {
@@ -58,12 +66,44 @@ const FileTreeNode = (props) => {
     }
   };
 
+  // Create draggable and droppable directives
+  const draggable = createDraggable(nodePath());
+  const droppable = isDirectory() ? createDroppable(nodePath()) : null;
+
+  // Get drag drop context for styling
+  const [dragDropState] = useDragDropContext();
+  
+  // Determine if this node is being dragged over
+  const isOver = () => {
+    return isDirectory() && 
+           dragDropState.active?.droppable === nodePath();
+  };
+
+  // Determine if this node is currently being dragged
+  const isDragging = () => {
+    return dragDropState.active?.draggable === nodePath();
+  };
+
+  const handleNodeClick = (e) => {
+    toggleExpand(e);
+    props.onSelect?.(nodePath());
+  };
+
   return (
-    <div class={styles.node} style={{"padding-left": `${props.depth * 16}px`}}>
+    <div 
+      class={styles.node} 
+      style={{"padding-left": `${props.depth * 16}px`}}
+      classList={{
+        [styles.isDragging]: isDragging(),
+        [styles.isOver]: isOver()
+      }}
+    >
       <div 
         class={`${styles.nodeHeader} ${isSelected() ? styles.selected : ''}`} 
-        onClick={toggleExpand}
+        onClick={handleNodeClick}
         data-path={nodePath()}
+        use:draggable
+        use:droppable
       >
         {isDirectory() && (
           <span class={styles.expandIcon}>
@@ -112,14 +152,15 @@ const flattenTree = (node, result = [], level = 0, parentPath = '') => {
 
 // Main FileTree component
 const FileTree = (props) => {
-  const data = () => props.data || dummyFileTree;
+  const [fileTree, setFileTree] = createSignal(props.data || dummyFileTree);
   const [flatNodes, setFlatNodes] = createSignal([]);
   const [selectedNodePath, setSelectedNodePath] = createSignal('');
   const [expandedNodes, setExpandedNodes] = createSignal({});
+  const [draggedNode, setDraggedNode] = createSignal(null);
   
   // Initialize flat node list
   createEffect(() => {
-    setFlatNodes(flattenTree(data()));
+    setFlatNodes(flattenTree(fileTree()));
     
     // Initialize all directories as expanded only on first render
     if (Object.keys(expandedNodes()).length === 0) {
@@ -213,6 +254,90 @@ const FileTree = (props) => {
     }));
   };
   
+  // Handle node selection
+  const handleSelect = (path) => {
+    setSelectedNodePath(path);
+  };
+  
+  // Find a node by path
+  const findNodeByPath = (path, tree = fileTree(), parentPath = '') => {
+    const currentPath = parentPath ? `${parentPath}/${tree.name}` : tree.name;
+    
+    if (currentPath === path) {
+      return { node: tree, parent: null };
+    }
+    
+    if (tree.type === 'directory' && tree.children) {
+      for (let i = 0; i < tree.children.length; i++) {
+        const result = findNodeByPath(path, tree.children[i], currentPath);
+        if (result.node) {
+          if (!result.parent) {
+            result.parent = tree;
+          }
+          return result;
+        }
+      }
+    }
+    
+    return { node: null, parent: null };
+  };
+  
+  // Handle drag and drop operations
+  const handleDragDrop = ({ draggable, droppable }) => {
+    if (!draggable || !droppable) return;
+    
+    const sourcePath = draggable.id;
+    const targetPath = droppable.id;
+    
+    // Don't drop onto self
+    if (sourcePath === targetPath) return;
+    
+    // Don't drop a parent into its child
+    if (targetPath.startsWith(sourcePath + '/')) return;
+    
+    // Find the source node and its parent
+    const sourceParentPath = sourcePath.substring(0, sourcePath.lastIndexOf('/'));
+    const { node: sourceNode } = findNodeByPath(sourcePath);
+    
+    if (!sourceNode) return;
+    
+    // Find the target node
+    const { node: targetNode } = findNodeByPath(targetPath);
+    if (!targetNode || targetNode.type !== 'directory') return;
+    
+    // Create a deep copy of the file tree
+    const newTree = JSON.parse(JSON.stringify(fileTree()));
+    
+    // Remove the source node from its parent
+    const { node: newSourceParent } = findNodeByPath(sourceParentPath, newTree);
+    
+    if (newSourceParent && newSourceParent.children) {
+      const sourceIndex = newSourceParent.children.findIndex(
+        child => `${sourceParentPath}/${child.name}` === sourcePath
+      );
+      
+      if (sourceIndex !== -1) {
+        const [removedNode] = newSourceParent.children.splice(sourceIndex, 1);
+        
+        // Add the source node to the target node
+        const { node: newTargetNode } = findNodeByPath(targetPath, newTree);
+        
+        if (newTargetNode && newTargetNode.children) {
+          newTargetNode.children.push(removedNode);
+          
+          // Ensure the target directory is expanded
+          setExpandedNodes(prev => ({
+            ...prev,
+            [targetPath]: true
+          }));
+          
+          // Update the file tree
+          setFileTree(newTree);
+        }
+      }
+    }
+  };
+  
   onMount(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -224,6 +349,28 @@ const FileTree = (props) => {
     return selectedNode ? selectedNode.path : 'No selection';
   };
 
+  // Get the node for the drag overlay
+  const getDraggedNodeDisplay = () => {
+    if (!draggedNode()) return null;
+    
+    const node = flatNodes().find(n => n.path === draggedNode());
+    if (!node) return null;
+    
+    return (
+      <div class={styles.dragOverlay}>
+        <span class={`${styles.icon} ${node.type === 'directory' ? styles.folderIcon : styles.fileIcon}`}>
+          {node.type === 'directory' ? '📁' : '📄'}
+        </span>
+        <span class={styles.nodeName}>{node.name}</span>
+      </div>
+    );
+  };
+
+  // Handle drag start
+  const handleDragStart = ({ draggable }) => {
+    setDraggedNode(draggable.id);
+  };
+
   return (
     <div class={styles.fileTree} tabIndex="0">
       <h3 class={styles.title}>File Explorer</h3>
@@ -231,15 +378,22 @@ const FileTree = (props) => {
         <span class={styles.selectedItemLabel}>Selected: </span>
         {getSelectedNodeName()}
       </div>
-      <div class={styles.treeContainer}>
-        <FileTreeNode 
-          node={data()} 
-          depth={0} 
-          selectedPath={selectedNodePath()}
-          expandedNodes={expandedNodes()}
-          onToggleExpand={toggleExpand}
-        />
-      </div>
+      <DragDropProvider onDragStart={handleDragStart} onDragEnd={handleDragDrop}>
+        <DragDropSensors />
+        <div class={styles.treeContainer}>
+          <FileTreeNode 
+            node={fileTree()} 
+            depth={0} 
+            selectedPath={selectedNodePath()}
+            expandedNodes={expandedNodes()}
+            onToggleExpand={toggleExpand}
+            onSelect={handleSelect}
+          />
+        </div>
+        <DragOverlay>
+          {getDraggedNodeDisplay()}
+        </DragOverlay>
+      </DragDropProvider>
     </div>
   );
 };
