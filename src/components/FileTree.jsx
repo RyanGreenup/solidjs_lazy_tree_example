@@ -84,11 +84,6 @@ const FileTreeNode = (props) => {
     return dragDropState.active?.draggable === nodePath();
   };
 
-  const handleNodeClick = (e) => {
-    toggleExpand(e);
-    props.onSelect?.(nodePath());
-  };
-
   return (
     <div 
       class={styles.node} 
@@ -100,13 +95,22 @@ const FileTreeNode = (props) => {
     >
       <div 
         class={`${styles.nodeHeader} ${isSelected() ? styles.selected : ''}`} 
-        onClick={handleNodeClick}
+        onClick={(e) => {
+          // Handle click for selection
+          props.onSelect?.(nodePath());
+        }}
         data-path={nodePath()}
         use:draggable
         use:droppable
       >
         {isDirectory() && (
-          <span class={styles.expandIcon}>
+          <span 
+            class={styles.expandIcon} 
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleExpand(e);
+            }}
+          >
             {isExpanded() ? '▼' : '►'}
           </span>
         )}
@@ -127,6 +131,7 @@ const FileTreeNode = (props) => {
                 selectedPath={props.selectedPath}
                 expandedNodes={props.expandedNodes}
                 onToggleExpand={props.onToggleExpand}
+                onSelect={props.onSelect}
               />
             )}
           </For>
