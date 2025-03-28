@@ -59,11 +59,6 @@ const FileTreeNode = (props) => {
     return props.selectedPath === nodePath();
   };
   
-  const toggleExpand = (e) => {
-    if (isDirectory()) {
-      props.onToggleExpand(nodePath());
-    }
-  };
 
   // Create draggable and droppable directives
   const draggable = createDraggable(nodePath());
@@ -123,7 +118,7 @@ const FileTreeNode = (props) => {
             class={styles.expandIcon}
             onClick={(e) => {
               e.stopPropagation();
-              toggleExpand();
+              props.onToggleExpand(nodePath());
               // Prevent drag from starting when clicking the expand icon
               e.preventDefault();
             }}
